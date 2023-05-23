@@ -1,0 +1,2 @@
+app.security.issuer-uri: http://localhost:${wiremock.server.port}/issuer
+app.security.client-id: our-app-client-id
