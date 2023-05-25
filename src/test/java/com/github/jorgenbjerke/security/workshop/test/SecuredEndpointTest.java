@@ -1,6 +1,7 @@
 package com.github.jorgenbjerke.security.workshop.test;
 
 import com.github.jorgenbjerke.security.workshop.TestBase;
+import com.github.jorgenbjerke.security.workshop.wiremock.issuer.IssuerStub;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
@@ -33,12 +34,21 @@ public abstract class SecuredEndpointTest extends TestBase {
 
     @Test
     @DisplayName("The Authorization signature is invalid")
-    void testBadSignature() {
+    void testBadSignature1() {
         RequestEntity<?> request = getRequestEntity();
         String[] originalAuthHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0).split("[.]");
         String[] newAuthHeader = issuerStub.generateToken(claims -> claims.replace("iat", Instant.now().minusSeconds(7200).getEpochSecond())).split("[.]");
         newAuthHeader[2] = originalAuthHeader[2];
         replaceAuthorizationHeader(request, Arrays.stream(newAuthHeader).collect(Collectors.joining(".")));
+        ResponseEntity<byte[]> response = testRestTemplate.exchange(request, byte[].class);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("The Authorization token is signed by another issuer")
+    void testBadSignature2() {
+        RequestEntity<?> request = getRequestEntity();
+        replaceAuthorizationHeader(request, new IssuerStub().generateToken());
         ResponseEntity<byte[]> response = testRestTemplate.exchange(request, byte[].class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
